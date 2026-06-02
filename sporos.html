@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPOROS // Autonomous Agent Infrastructure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070a08;
+  --bg-soft:#0b0f0c;
+  --panel:#0d130f;
+  --panel-2:#101710;
+  --line:#1b2a1d;
+  --line-bright:#2a4530;
+  --phos:#34f78d;
+  --phos-dim:#1d8a52;
+  --phos-glow:rgba(52,247,141,.55);
+  --amber:#ffb454;
+  --cyan:#56e1ff;
+  --magenta:#ff6b9d;
+  --txt:#c8e8d2;
+  --txt-dim:#5e7a66;
+  --txt-faint:#3a4f40;
+  --white:#eafff1;
+  --radius:4px;
+  --mono:'JetBrains Mono',monospace;
+  --grot:'Space Grotesk',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:var(--mono);
+  font-size:14px;
+  line-height:1.5;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* scanline + grain overlay */
+body::before{
+  content:'';position:fixed;inset:0;z-index:9998;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.18) 3px,rgba(0,0,0,0) 4px);
+  opacity:.4;mix-blend-mode:multiply;
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 0%,transparent 55%,rgba(0,0,0,.55) 100%);
+}
+::selection{background:var(--phos);color:#04140a}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:var(--bg-soft)}
+::-webkit-scrollbar-thumb{background:var(--line-bright);border-radius:0}
+::-webkit-scrollbar-thumb:hover{background:var(--phos-dim)}
+
+/* ---------- LAYOUT ---------- */
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+
+/* sidebar */
+.side{
+  border-right:1px solid var(--line);
+  background:linear-gradient(180deg,var(--bg-soft),var(--bg));
+  position:sticky;top:0;height:100vh;display:flex;flex-direction:column;
+  z-index:50;
+}
+.brand{
+  padding:20px 18px 16px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:11px;
+}
+.logo-mark{
+  width:34px;height:34px;border:1px solid var(--phos-dim);border-radius:3px;
+  display:grid;place-items:center;position:relative;flex-shrink:0;
+  background:radial-gradient(circle at 50% 50%,rgba(52,247,141,.14),transparent 70%);
+  box-shadow:0 0 14px rgba(52,247,141,.25),inset 0 0 10px rgba(52,247,141,.1);
+}
+.logo-mark svg{width:20px;height:20px}
+.logo-mark::after{content:'';position:absolute;inset:0;border:1px solid transparent;border-radius:3px;animation:pulseBorder 3s infinite}
+@keyframes pulseBorder{0%,100%{box-shadow:0 0 0 0 rgba(52,247,141,.4)}50%{box-shadow:0 0 0 3px rgba(52,247,141,0)}}
+.brand-name{font-family:var(--grot);font-weight:700;font-size:18px;letter-spacing:.22em;color:var(--white);text-shadow:0 0 12px var(--phos-glow)}
+.brand-sub{font-size:9px;letter-spacing:.3em;color:var(--txt-dim);text-transform:uppercase;margin-top:1px}
+
+.nav{padding:14px 10px;flex:1;overflow-y:auto}
+.nav-label{font-size:9px;letter-spacing:.28em;color:var(--txt-faint);text-transform:uppercase;padding:14px 10px 7px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:3px;
+  color:var(--txt-dim);cursor:pointer;font-size:12.5px;letter-spacing:.02em;
+  border:1px solid transparent;position:relative;transition:all .15s;margin-bottom:1px;
+}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nav-item:hover{color:var(--txt);background:var(--panel);border-color:var(--line)}
+.nav-item.active{color:var(--phos);background:linear-gradient(90deg,rgba(52,247,141,.1),transparent);border-color:var(--line-bright)}
+.nav-item.active svg{opacity:1}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:18px;background:var(--phos);box-shadow:0 0 8px var(--phos-glow)}
+.nav-kbd{margin-left:auto;font-size:9.5px;color:var(--txt-faint);border:1px solid var(--line);border-radius:3px;padding:1px 5px}
+
+.side-foot{padding:14px;border-top:1px solid var(--line)}
+.usage-bar{margin-bottom:10px}
+.usage-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--txt-dim);margin-bottom:5px}
+.usage-bar-track{height:4px;background:var(--panel-2);border-radius:2px;overflow:hidden;border:1px solid var(--line)}
+.usage-bar-fill{height:100%;background:linear-gradient(90deg,var(--phos-dim),var(--phos));box-shadow:0 0 8px var(--phos-glow)}
+.user-chip{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:3px;background:var(--panel)}
+.user-av{width:28px;height:28px;border-radius:3px;background:linear-gradient(135deg,var(--phos-dim),var(--cyan));display:grid;place-items:center;font-weight:700;color:#04140a;font-size:12px;flex-shrink:0}
+.user-name{font-size:11.5px;color:var(--txt);font-weight:500}
+.user-plan{font-size:9px;color:var(--phos);letter-spacing:.1em}
+
+/* main */
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{
+  height:54px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+  padding:0 22px;gap:18px;position:sticky;top:0;z-index:40;
+  background:rgba(7,10,8,.85);backdrop-filter:blur(12px);
+}
+.crumb{font-size:11px;color:var(--txt-dim);letter-spacing:.04em}
+.crumb b{color:var(--phos);font-weight:500}
+.topbar-search{
+  flex:1;max-width:420px;display:flex;align-items:center;gap:9px;padding:7px 12px;
+  border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--txt-dim);
+}
+.topbar-search input{background:none;border:none;outline:none;color:var(--txt);font-family:var(--mono);font-size:12px;width:100%}
+.topbar-search input::placeholder{color:var(--txt-faint)}
+.topbar-search .slash{margin-left:auto;border:1px solid var(--line);border-radius:3px;padding:0 6px;font-size:10px;color:var(--txt-faint)}
+.topbar-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.tb-btn{width:34px;height:34px;border:1px solid var(--line);border-radius:3px;background:var(--panel);display:grid;place-items:center;cursor:pointer;color:var(--txt-dim);transition:.15s;position:relative}
+.tb-btn:hover{color:var(--phos);border-color:var(--line-bright)}
+.tb-btn svg{width:16px;height:16px}
+.tb-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber)}
+.tb-status{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--txt-dim);border:1px solid var(--line);padding:6px 11px;border-radius:3px;background:var(--panel)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--phos);box-shadow:0 0 8px var(--phos-glow);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.view{padding:26px;flex:1;animation:fadeUp .4s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.view-hd{margin-bottom:24px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.view-title{font-family:var(--grot);font-size:26px;font-weight:700;color:var(--white);letter-spacing:-.01em;display:flex;align-items:center;gap:11px}
+.view-title .blink{color:var(--phos);animation:blink 1.1s steps(1) infinite}
+.view-desc{font-size:12.5px;color:var(--txt-dim);margin-top:5px;max-width:560px}
+.hd-actions{display:flex;gap:9px}
+
+/* buttons */
+.btn{
+  font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.02em;
+  padding:9px 16px;border-radius:3px;border:1px solid var(--line-bright);
+  background:var(--panel);color:var(--txt);cursor:pointer;display:inline-flex;
+  align-items:center;gap:8px;transition:.15s;white-space:nowrap;
+}
+.btn svg{width:15px;height:15px}
+.btn:hover{border-color:var(--phos-dim);color:var(--white);background:var(--panel-2)}
+.btn.primary{
+  background:linear-gradient(180deg,var(--phos),var(--phos-dim));color:#04140a;
+  border-color:var(--phos);font-weight:600;box-shadow:0 0 16px rgba(52,247,141,.3),inset 0 1px 0 rgba(255,255,255,.3);
+}
+.btn.primary:hover{box-shadow:0 0 24px rgba(52,247,141,.5);color:#04140a}
+.btn.ghost{background:transparent;border-color:var(--line)}
+
+/* cards / panels */
+.panel{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);position:relative}
+.panel-hd{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.panel-hd h3{font-size:12px;font-weight:600;color:var(--txt);letter-spacing:.04em;text-transform:uppercase;font-family:var(--grot)}
+.panel-hd .dim{font-size:10px;color:var(--txt-faint);margin-left:auto}
+.panel-body{padding:16px}
+.win-dots{display:flex;gap:5px}
+.win-dots i{width:9px;height:9px;border-radius:50%;display:block}
+.win-dots i:nth-child(1){background:#ff5f57}.win-dots i:nth-child(2){background:#febc2e}.win-dots i:nth-child(3){background:#28c840}
+
+/* stat grid */
+.grid{display:grid;gap:14px}
+.stats{grid-template-columns:repeat(4,1fr)}
+.stat{
+  border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(160deg,var(--panel),var(--bg-soft));
+  padding:16px;position:relative;overflow:hidden;
+}
+.stat::after{content:'';position:absolute;top:0;right:0;width:80px;height:80px;background:radial-gradient(circle,rgba(52,247,141,.08),transparent 70%)}
+.stat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.stat-ico{width:32px;height:32px;border:1px solid var(--line-bright);border-radius:3px;display:grid;place-items:center;color:var(--phos)}
+.stat-ico svg{width:17px;height:17px}
+.stat-trend{font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px}
+.stat-trend.up{color:var(--phos)}.stat-trend.down{color:var(--magenta)}
+.stat-val{font-size:30px;font-weight:700;color:var(--white);font-family:var(--grot);line-height:1;letter-spacing:-.02em}
+.stat-label{font-size:11px;color:var(--txt-dim);margin-top:7px;letter-spacing:.04em;text-transform:uppercase}
+.stat-spark{position:absolute;bottom:0;left:0;right:0;height:30px;opacity:.5}
+
+.cols-2{grid-template-columns:1.6fr 1fr}
+.cols-3{grid-template-columns:repeat(3,1fr)}
+
+/* activity feed */
+.feed-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:12px}
+.feed-item:last-child{border-bottom:none}
+.feed-time{color:var(--txt-faint);font-size:10.5px;white-space:nowrap;width:54px;flex-shrink:0;padding-top:1px}
+.feed-ico{width:22px;height:22px;border-radius:3px;display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line)}
+.feed-ico svg{width:12px;height:12px}
+.feed-body{flex:1;min-width:0}
+.feed-body b{color:var(--white);font-weight:500}
+.feed-body .tag{color:var(--phos)}
+.feed-body .muted{color:var(--txt-dim)}
+.dot-ok{color:var(--phos)}.dot-warn{color:var(--amber)}.dot-err{color:var(--magenta)}.dot-info{color:var(--cyan)}
+
+/* deployment status rows */
+.dep-row{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid var(--line)}
+.dep-row:last-child{border:none}
+.dep-name{font-size:12.5px;color:var(--txt);font-weight:500;flex:1}
+.dep-name span{display:block;font-size:10px;color:var(--txt-faint);font-weight:400;margin-top:2px}
+.badge{font-size:9.5px;padding:3px 8px;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;white-space:nowrap}
+.badge.live{background:rgba(52,247,141,.13);color:var(--phos);border:1px solid rgba(52,247,141,.3)}
+.badge.build{background:rgba(255,180,84,.13);color:var(--amber);border:1px solid rgba(255,180,84,.3)}
+.badge.fail{background:rgba(255,107,157,.13);color:var(--magenta);border:1px solid rgba(255,107,157,.3)}
+.badge.idle{background:rgba(94,122,102,.13);color:var(--txt-dim);border:1px solid var(--line)}
+.mini-ring{width:38px;height:38px;flex-shrink:0}
+
+/* health */
+.health-item{display:flex;align-items:center;gap:11px;padding:9px 0}
+.health-label{font-size:12px;color:var(--txt-dim);width:115px;flex-shrink:0}
+.health-track{flex:1;height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;border:1px solid var(--line)}
+.health-fill{height:100%;border-radius:3px}
+.health-val{font-size:11px;color:var(--txt);width:42px;text-align:right;flex-shrink:0}
+
+/* resource donut wrapper */
+.res-wrap{display:flex;align-items:center;gap:20px}
+.res-legend{flex:1}
+.res-leg-item{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:12px}
+.res-leg-item .sw{width:10px;height:10px;border-radius:2px}
+.res-leg-item .val{margin-left:auto;color:var(--txt);font-weight:600}
+
+/* ===== AGENT BUILDER ===== */
+.builder{display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start}
+.steps{display:flex;gap:0;margin-bottom:22px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.step{flex:1;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;border-right:1px solid var(--line);position:relative;transition:.15s}
+.step:last-child{border-right:none}
+.step:hover{background:var(--panel)}
+.step.active{background:linear-gradient(180deg,rgba(52,247,141,.08),transparent)}
+.step.done .step-num{background:var(--phos-dim);color:var(--white);border-color:var(--phos-dim)}
+.step-num{width:24px;height:24px;border:1px solid var(--line-bright);border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--txt-dim);flex-shrink:0}
+.step.active .step-num{border-color:var(--phos);color:var(--phos);box-shadow:0 0 10px var(--phos-glow)}
+.step-txt{font-size:11.5px;color:var(--txt-dim)}
+.step.active .step-txt{color:var(--white)}
+.step-txt span{display:block;font-size:9px;color:var(--txt-faint);letter-spacing:.1em}
+
+.field{margin-bottom:18px}
+.field label{display:block;font-size:11px;color:var(--txt);margin-bottom:7px;letter-spacing:.03em}
+.field label .req{color:var(--magenta)}
+.field .hint{font-size:10.5px;color:var(--txt-faint);margin-top:6px}
+.inp,.sel,.area{
+  width:100%;background:var(--bg-soft);border:1px solid var(--line);border-radius:3px;
+  padding:11px 13px;color:var(--white);font-family:var(--mono);font-size:13px;outline:none;transition:.15s;
+}
+.inp:focus,.sel:focus,.area:focus{border-color:var(--phos-dim);box-shadow:0 0 0 3px rgba(52,247,141,.08)}
+.inp::placeholder,.area::placeholder{color:var(--txt-faint)}
+.area{resize:vertical;min-height:130px;line-height:1.7}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* selectable cards */
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.opt{border:1px solid var(--line);border-radius:3px;padding:13px;cursor:pointer;transition:.15s;background:var(--bg-soft);position:relative}
+.opt:hover{border-color:var(--line-bright)}
+.opt.sel{border-color:var(--phos);background:linear-gradient(160deg,rgba(52,247,141,.08),transparent)}
+.opt.sel::after{content:'✓';position:absolute;top:9px;right:11px;color:var(--phos);font-weight:700}
+.opt-name{font-size:13px;color:var(--white);font-weight:600;display:flex;align-items:center;gap:8px}
+.opt-name .pill{font-size:8.5px;background:var(--panel-2);border:1px solid var(--line);padding:1px 6px;border-radius:8px;color:var(--phos);letter-spacing:.05em}
+.opt-desc{font-size:10.5px;color:var(--txt-dim);margin-top:5px;line-height:1.5}
+.opt-meta{display:flex;gap:14px;margin-top:9px;font-size:10px;color:var(--txt-faint)}
+.opt-meta b{color:var(--txt-dim)}
+
+/* tool chips */
+.tools{display:flex;flex-wrap:wrap;gap:9px}
+.tool-chip{border:1px solid var(--line);border-radius:3px;padding:8px 12px;font-size:12px;color:var(--txt-dim);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s;background:var(--bg-soft)}
+.tool-chip svg{width:14px;height:14px}
+.tool-chip:hover{border-color:var(--line-bright);color:var(--txt)}
+.tool-chip.sel{border-color:var(--phos);color:var(--phos);background:rgba(52,247,141,.08)}
+.tool-chip.sel .chk{color:var(--phos)}
+.tool-chip .chk{color:var(--txt-faint)}
+
+/* slider */
+.slider-row{display:flex;align-items:center;gap:14px}
+.slider{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--panel-2);outline:none;border:1px solid var(--line)}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--phos);cursor:pointer;box-shadow:0 0 10px var(--phos-glow);border:2px solid var(--bg)}
+.slider-val{font-size:13px;color:var(--phos);font-weight:600;width:46px;text-align:right}
+
+/* live preview terminal */
+.preview{position:sticky;top:72px}
+.term{background:#040705;border:1px solid var(--line-bright);border-radius:var(--radius);overflow:hidden;box-shadow:0 0 30px rgba(0,0,0,.6)}
+.term-hd{padding:10px 13px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;background:var(--panel)}
+.term-title{font-size:10.5px;color:var(--txt-dim);letter-spacing:.05em}
+.term-body{padding:15px;font-size:12px;line-height:1.75;min-height:340px;max-height:480px;overflow-y:auto}
+.term-line{margin-bottom:3px}
+.term-line .pmt{color:var(--phos)}
+.term-line .usr{color:var(--cyan)}
+.term-line .out{color:var(--txt-dim)}
+.term-line .key{color:var(--amber)}
+.term-line .str{color:var(--phos)}
+.term-cursor{display:inline-block;width:8px;height:14px;background:var(--phos);vertical-align:middle;animation:blink 1s steps(1) infinite;box-shadow:0 0 8px var(--phos-glow)}
+
+/* ===== SKILL / TEMPLATE MARKETPLACE ===== */
+.filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px}
+.chip{font-size:11.5px;padding:7px 14px;border:1px solid var(--line);border-radius:30px;color:var(--txt-dim);cursor:pointer;transition:.15s;background:var(--panel);white-space:nowrap}
+.chip:hover{border-color:var(--line-bright);color:var(--txt)}
+.chip.active{background:rgba(52,247,141,.12);border-color:var(--phos);color:var(--phos)}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.mkt-card{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(165deg,var(--panel),var(--bg-soft));overflow:hidden;transition:.18s;cursor:pointer;position:relative}
+.mkt-card:hover{border-color:var(--line-bright);transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.mkt-card.feat{border-color:var(--phos-dim);box-shadow:0 0 24px rgba(52,247,141,.1)}
+.mkt-top{padding:16px;display:flex;gap:13px;align-items:flex-start}
+.mkt-ico{width:44px;height:44px;border-radius:6px;display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line-bright);background:var(--panel-2)}
+.mkt-ico svg{width:22px;height:22px}
+.mkt-info{flex:1;min-width:0}
+.mkt-name{font-size:14px;color:var(--white);font-weight:600;font-family:var(--grot);display:flex;align-items:center;gap:8px}
+.mkt-name .v{font-size:9px;color:var(--txt-faint);font-weight:400}
+.mkt-cat{font-size:10px;color:var(--phos);letter-spacing:.06em;text-transform:uppercase;margin-top:3px}
+.mkt-desc{padding:0 16px 14px;font-size:11.5px;color:var(--txt-dim);line-height:1.6}
+.mkt-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;font-size:10.5px;color:var(--txt-faint)}
+.mkt-foot .m{display:flex;align-items:center;gap:5px}
+.mkt-foot .m svg{width:13px;height:13px}
+.mkt-foot .m b{color:var(--txt-dim)}
+.feat-flag{position:absolute;top:0;right:0;background:var(--phos);color:#04140a;font-size:8.5px;font-weight:700;padding:3px 10px;letter-spacing:.1em;border-bottom-left-radius:4px}
+.stars{color:var(--amber)}
+
+/* ===== DEPLOYMENT CENTER ===== */
+.dep-grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+.table{width:100%;border-collapse:collapse;font-size:12px}
+.table th{text-align:left;padding:11px 14px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-faint);border-bottom:1px solid var(--line);font-weight:500}
+.table td{padding:13px 14px;border-bottom:1px solid var(--line);color:var(--txt-dim)}
+.table tr:hover td{background:var(--panel)}
+.table tr:last-child td{border-bottom:none}
+.table .name{color:var(--white);font-weight:500}
+.table .hash{color:var(--txt-faint);font-size:10.5px}
+.env-pill{font-size:9.5px;padding:2px 8px;border-radius:3px;border:1px solid var(--line);color:var(--txt-dim)}
+.env-pill.prod{color:var(--magenta);border-color:rgba(255,107,157,.3)}
+.env-pill.stg{color:var(--amber);border-color:rgba(255,180,84,.3)}
+.env-pill.dev{color:var(--cyan);border-color:rgba(86,225,255,.3)}
+
+.logs{background:#040705;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.logs-hd{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;background:var(--panel)}
+.logs-hd h3{font-size:11px;color:var(--txt);letter-spacing:.06em;text-transform:uppercase}
+.logs-body{padding:13px 14px;font-size:11px;line-height:1.85;max-height:520px;overflow-y:auto;font-family:var(--mono)}
+.log-ln{display:flex;gap:11px}
+.log-ts{color:var(--txt-faint);white-space:nowrap}
+.log-lv{width:48px;flex-shrink:0;font-weight:600}
+.log-lv.INF{color:var(--cyan)}.log-lv.OK{color:var(--phos)}.log-lv.WRN{color:var(--amber)}.log-lv.ERR{color:var(--magenta)}
+.log-msg{color:var(--txt-dim);flex:1}
+.log-msg .h{color:var(--txt)}
+
+/* ===== ANALYTICS ===== */
+.an-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.chart-box{height:230px;position:relative}
+svg.chart{width:100%;height:100%;overflow:visible}
+.legend{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--txt-dim)}
+.legend-item .sw{width:11px;height:3px;border-radius:2px}
+
+.section-divider{font-size:10px;letter-spacing:.25em;color:var(--txt-faint);text-transform:uppercase;margin:6px 0 16px;display:flex;align-items:center;gap:12px}
+.section-divider::after{content:'';flex:1;height:1px;background:var(--line)}
+
+/* perf bars */
+.perf-row{display:flex;align-items:center;gap:13px;padding:11px 0;border-bottom:1px solid var(--line)}
+.perf-row:last-child{border:none}
+.perf-rank{width:22px;height:22px;border:1px solid var(--line);border-radius:3px;display:grid;place-items:center;font-size:11px;color:var(--phos);flex-shrink:0}
+.perf-name{font-size:12.5px;color:var(--txt);width:140px;flex-shrink:0}
+.perf-name span{display:block;font-size:10px;color:var(--txt-faint)}
+.perf-track{flex:1;height:7px;background:var(--panel-2);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.perf-fill{height:100%;background:linear-gradient(90deg,var(--phos-dim),var(--phos));border-radius:4px}
+.perf-val{font-size:12px;color:var(--white);font-weight:600;width:54px;text-align:right;flex-shrink:0}
+
+.hidden{display:none!important}
+
+/* responsive */
+@media(max-width:1100px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .cols-2,.builder,.dep-grid,.an-grid{grid-template-columns:1fr}
+  .preview{position:static}
+}
+@media(max-width:820px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;left:-260px;transition:.25s;width:248px}
+  .side.open{left:0}
+  .topbar-search{display:none}
+  .cols-3{grid-template-columns:1fr}
+}
+.menu-btn{display:none;width:34px;height:34px;border:1px solid var(--line);border-radius:3px;background:var(--panel);place-items:center;cursor:pointer;color:var(--txt)}
+@media(max-width:820px){.menu-btn{display:grid}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--phos)" stroke-width="1.6">
+          <circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="8.5" stroke-dasharray="2 3" opacity=".6"/>
+          <path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">SPOROS</div>
+        <div class="brand-sub">Agent Infra</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">Workspace</div>
+      <div class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard <span class="nav-kbd">1</span>
+      </div>
+      <div class="nav-item" data-view="builder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 4 7v10l8 5 8-5V7z"/><path d="M12 12 4 7M12 12l8-5M12 12v10"/></svg>
+        Agent Builder <span class="nav-kbd">2</span>
+      </div>
+      <div class="nav-item" data-view="skills">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 2 3 6 6 1-4.5 4.5L17 20l-5-3-5 3 1-6.5L3.5 9 9 8z"/></svg>
+        Skill Builder <span class="nav-kbd">3</span>
+      </div>
+      <div class="nav-item" data-view="deploy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4.5 16.5 3 21l4.5-1.5M14 6l4 4M16 4c2 0 4 2 4 4-1 5-7 9-7 9l-4-4s4-6 9-7c1-1 1-2-2-2z"/></svg>
+        Deployment <span class="nav-kbd">4</span>
+      </div>
+      <div class="nav-item" data-view="templates">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 21V9"/></svg>
+        Templates <span class="nav-kbd">5</span>
+      </div>
+      <div class="nav-item" data-view="analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="m7 14 3-4 3 3 5-6"/></svg>
+        Analytics <span class="nav-kbd">6</span>
+      </div>
+      <div class="nav-label">System</div>
+      <div class="nav-item" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8"/></svg>
+        Settings
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="usage-bar">
+        <div class="usage-bar-label"><span>COMPUTE CREDITS</span><span>72%</span></div>
+        <div class="usage-bar-track"><div class="usage-bar-fill" style="width:72%"></div></div>
+      </div>
+      <div class="user-chip">
+        <div class="user-av">N</div>
+        <div>
+          <div class="user-name">Nara Studio</div>
+          <div class="user-plan">◆ ENTERPRISE</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="topbar">
+      <div class="menu-btn" onclick="document.getElementById('side').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </div>
+      <div class="crumb">sporos / <b id="crumb">dashboard</b></div>
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input placeholder="Search agents, skills, deployments...">
+        <span class="slash">/</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="tb-status"><span class="live-dot"></span> ALL SYSTEMS OPERATIONAL</div>
+        <div class="tb-btn"><div class="tb-dot"></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+        <div class="tb-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="4"/></svg></div>
+      </div>
+    </div>
+
+    <!-- ====== DASHBOARD ====== -->
+    <section class="view" id="view-dashboard">
+      <div class="view-hd">
+        <div>
+          <div class="view-title">Operations Dashboard<span class="blink">_</span></div>
+          <div class="view-desc">Real-time telemetry across your autonomous agent fleet. Last sync 3s ago.</div>
+        </div>
+        <div class="hd-actions">
+          <button class="btn ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Refresh</button>
+          <button class="btn primary" onclick="go('builder')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New Agent</button>
+        </div>
+      </div>
+
+      <div class="grid stats" style="margin-bottom:14px">
+        <div class="stat">
+          <div class="stat-top"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 4 7v10l8 5 8-5V7z"/></svg></div><div class="stat-trend up">▲ 12.4%</div></div>
+          <div class="stat-val" data-count="247">0</div>
+          <div class="stat-label">Active Agents</div>
+          <svg class="stat-spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,22 15,18 30,20 45,12 60,15 75,8 90,10 100,4" fill="none" stroke="var(--phos)" stroke-width="1.5"/></svg>
+        </div>
+        <div class="stat">
+          <div class="stat-top"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="stat-trend up">▲ 8.1%</div></div>
+          <div class="stat-val" data-count="1.84" data-suffix="M">0</div>
+          <div class="stat-label">Invocations / 24h</div>
+          <svg class="stat-spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,18 15,20 30,14 45,16 60,9 75,11 90,6 100,8" fill="none" stroke="var(--cyan)" stroke-width="1.5"/></svg>
+        </div>
+        <div class="stat">
+          <div class="stat-top"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div><div class="stat-trend up">▲ 0.3%</div></div>
+          <div class="stat-val" data-count="99.97" data-suffix="%">0</div>
+          <div class="stat-label">Fleet Uptime</div>
+          <svg class="stat-spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,10 15,8 30,11 45,7 60,9 75,6 90,8 100,5" fill="none" stroke="var(--phos)" stroke-width="1.5"/></svg>
+        </div>
+        <div class="stat">
+          <div class="stat-top"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-trend down">▼ 4.2%</div></div>
+          <div class="stat-val" data-prefix="$" data-count="12.7" data-suffix="K">0</div>
+          <div class="stat-label">Spend / Month</div>
+          <svg class="stat-spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,8 15,12 30,10 45,14 60,13 75,17 90,16 100,20" fill="none" stroke="var(--amber)" stroke-width="1.5"/></svg>
+        </div>
+      </div>
+
+      <div class="grid cols-2" style="margin-bottom:14px">
+        <div class="panel">
+          <div class="panel-hd"><div class="win-dots"><i></i><i></i><i></i></div><h3>Invocation Throughput</h3><span class="dim">live · req/min</span></div>
+          <div class="panel-body">
+            <div class="chart-box" style="height:240px">
+              <svg class="chart" id="throughput" viewBox="0 0 600 220" preserveAspectRatio="none"></svg>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hd"><div class="win-dots"><i></i><i></i><i></i></div><h3>Recent Activity</h3></div>
+          <div class="panel-body" style="max-height:288px;overflow-y:auto">
+            <div class="feed-item"><div class="feed-time">12:04:51</div><div class="feed-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--phos)" stroke-width="1.6"><path d="M20 6 9 17l-5-5"/></svg></div><div class="feed-body"><b class="tag">support-triage-v3</b> deployed to <b>production</b> <span class="muted">· build #2841 passed in 41s</span></div></div>
+            <div class="feed-item"><div class="feed-time">12:03:18</div><div class="feed-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.6"><path d="M12 2 4 7v10l8 5 8-5V7z"/></svg></div><div class="feed-body"><b>data-extractor</b> processed <b class="tag">14,209</b> documents <span class="muted">· 0 errors</span></div></div>
+            <div class="feed-item"><div class="feed-time">12:01:44</div><div class="feed-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.6"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div><div class="feed-body"><b>scraper-agent</b> hit rate limit on <b>api.vendor.io</b> <span class="muted">· auto-retry queued</span></div></div>
+            <div class="feed-item"><div class="feed-time">11:58:02</div><div class="feed-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--phos)" stroke-width="1.6"><path d="m12 2 3 6 6 1-4.5 4.5L17 20l-5-3-5 3 1-6.5L3.5 9 9 8z"/></svg></div><div class="feed-body">New skill <b class="tag">pdf-redactor</b> published to marketplace <span class="muted">· by you</span></div></div>
+            <div class="feed-item"><div class="feed-time">11:55:37</div><div class="feed-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div><div class="feed-body"><b>cron-scheduler</b> triggered <b class="tag">weekly-report</b> <span class="muted">· 3 agents orchestrated</span></div></div>
+            <div class="feed-item"><div class="feed-time">11:51:09</div><div class="feed-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--magenta)" stroke-width="1.6"><path d="M18 6 6 18M6 6l12 12"/></svg></div><div class="feed-body"><b>legacy-bot</b> connection refused <span class="muted">· quarantined automatically</span></div></div>
+            <div class="feed-item"><div class="feed-time">11:47:55</div><div class="feed-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--phos)" stroke-width="1.6"><path d="M20 6 9 17l-5-5"/></svg></div><div class="feed-body"><b class="tag">memory-sync</b> completed across <b>12 nodes</b> <span class="muted">· vector index rebuilt</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid cols-3">
+        <div class="panel">
+          <div class="panel-hd"><h3>Deployment Status</h3><span class="dim">8 services</span></div>
+          <div class="panel-body">
+            <div class="dep-row"><div class="dep-name">support-triage-v3<span>prod · us-east-1</span></div><div class="badge live">● Live</div></div>
+            <div class="dep-row"><div class="dep-name">data-extractor<span>prod · eu-west-2</span></div><div class="badge live">● Live</div></div>
+            <div class="dep-row"><div class="dep-name">research-synth<span>staging · us-east-1</span></div><div class="badge build">↻ Building</div></div>
+            <div class="dep-row"><div class="dep-name">legacy-bot<span>prod · ap-south-1</span></div><div class="badge fail">✕ Failed</div></div>
+            <div class="dep-row"><div class="dep-name">sandbox-runner<span>dev · local</span></div><div class="badge idle">○ Idle</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hd"><h3>Resource Usage</h3><span class="dim">cluster-01</span></div>
+          <div class="panel-body">
+            <div class="res-wrap">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--line)" stroke-width="11"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--phos)" stroke-width="11" stroke-dasharray="301.6" stroke-dashoffset="105" stroke-linecap="round" transform="rotate(-90 60 60)" style="filter:drop-shadow(0 0 6px var(--phos-glow))"/>
+                <circle cx="60" cy="60" r="34" fill="none" stroke="var(--line)" stroke-width="9"/>
+                <circle cx="60" cy="60" r="34" fill="none" stroke="var(--cyan)" stroke-width="9" stroke-dasharray="213.6" stroke-dashoffset="120" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                <text x="60" y="58" text-anchor="middle" fill="var(--white)" font-size="20" font-weight="700" font-family="var(--grot)">65%</text>
+                <text x="60" y="73" text-anchor="middle" fill="var(--txt-dim)" font-size="8" letter-spacing="1">UTILIZED</text>
+              </svg>
+              <div class="res-legend">
+                <div class="res-leg-item"><span class="sw" style="background:var(--phos)"></span>vCPU<span class="val">65%</span></div>
+                <div class="res-leg-item"><span class="sw" style="background:var(--cyan)"></span>Memory<span class="val">44%</span></div>
+                <div class="res-leg-item"><span class="sw" style="background:var(--amber)"></span>GPU<span class="val">81%</span></div>
+                <div class="res-leg-item"><span class="sw" style="background:var(--line-bright)"></span>Storage<span class="val">29%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hd"><h3>System Health</h3><span class="dim">● healthy</span></div>
+          <div class="panel-body">
+            <div class="health-item"><div class="health-label">API Gateway</div><div class="health-track"><div class="health-fill" style="width:98%;background:var(--phos)"></div></div><div class="health-val">98ms</div></div>
+            <div class="health-item"><div class="health-label">Vector DB</div><div class="health-track"><div class="health-fill" style="width:92%;background:var(--phos)"></div></div><div class="health-val">12ms</div></div>
+            <div class="health-item"><div class="health-label">Model Router</div><div class="health-track"><div class="health-fill" style="width:88%;background:var(--phos)"></div></div><div class="health-val">340ms</div></div>
+            <div class="health-item"><div class="health-label">Queue Worker</div><div class="health-track"><div class="health-fill" style="width:71%;background:var(--amber)"></div></div><div class="health-val">1.2s</div></div>
+            <div class="health-item"><div class="health-label">Webhook Relay</div><div class="health-track"><div class="health-fill" style="width:95%;background:var(--phos)"></div></div><div class="health-val">45ms</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== AGENT BUILDER ====== -->
+    <section class="view hidden" id="view-builder">
+      <div class="view-hd">
+        <div>
+          <div class="view-title">Agent Builder<span class="blink">_</span></div>
+          <div class="view-desc">Compose an autonomous agent from memory, tools, and reasoning models. Changes preview live.</div>
+        </div>
+        <div class="hd-actions">
+          <button class="btn ghost">Save Draft</button>
+          <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Deploy Agent</button>
+        </div>
+      </div>
+
+      <div class="steps" id="steps">
+        <div class="step active done" data-step="0"><div class="step-num">1</div><div class="step-txt">Identity<span>BASICS</span></div></div>
+        <div class="step" data-step="1"><div class="step-num">2</div><div class="step-txt">Model<span>REASONING</span></div></div>
+        <div class="step" data-step="2"><div class="step-num">3</div><div class="step-txt">Memory<span>CONTEXT</span></div></div>
+        <div class="step" data-step="3"><div class="step-num">4</div><div class="step-txt">Tools<span>ABILITIES</span></div></div>
+        <div class="step" data-step="4"><div class="step-num">5</div><div class="step-txt">Prompt<span>BEHAVIOR</span></div></div>
+      </div>
+
+      <div class="builder">
+        <div class="panel">
+          <div class="panel-hd"><div class="win-dots"><i></i><i></i><i></i></div><h3 id="step-title">Step 1 — Identity</h3></div>
+          <div class="panel-body">
+            <!-- step 0 -->
+            <div class="step-pane" data-pane="0">
+              <div class="field"><label>Agent Name <span class="req">*</span></label><input class="inp" id="ag-name" value="support-triage-v3" oninput="updatePreview()"></div>
+              <div class="row-2">
+                <div class="field"><label>Slug</label><input class="inp" value="support-triage" disabled></div>
+                <div class="field"><label>Visibility</label><select class="sel"><option>Private (workspace)</option><option>Organization</option><option>Public</option></select></div>
+              </div>
+              <div class="field"><label>Description</label><textarea class="area" style="min-height:90px" oninput="updatePreview()">Triages inbound support tickets, classifies intent, drafts a first response, and escalates anything touching billing or security to a human reviewer.</textarea></div>
+            </div>
+            <!-- step 1 -->
+            <div class="step-pane hidden" data-pane="1">
+              <div class="field"><label>Base Model <span class="req">*</span></label>
+                <div class="opt-grid">
+                  <div class="opt sel" onclick="pickModel(this,'orion-4-opus')"><div class="opt-name">Orion-4 Opus <span class="pill">FRONTIER</span></div><div class="opt-desc">Deepest reasoning, best for complex multi-step triage.</div><div class="opt-meta"><span><b>200K</b> ctx</span><span><b>$15</b>/M tok</span></div></div>
+                  <div class="opt" onclick="pickModel(this,'orion-4-sonnet')"><div class="opt-name">Orion-4 Sonnet</div><div class="opt-desc">Balanced speed & quality. Great default.</div><div class="opt-meta"><span><b>200K</b> ctx</span><span><b>$3</b>/M tok</span></div></div>
+                  <div class="opt" onclick="pickModel(this,'orion-haiku')"><div class="opt-name">Orion Haiku</div><div class="opt-desc">Sub-second latency for high volume.</div><div class="opt-meta"><span><b>128K</b> ctx</span><span><b>$0.8</b>/M tok</span></div></div>
+                  <div class="opt" onclick="pickModel(this,'open-mixtral')"><div class="opt-name">Mixtral-OSS <span class="pill">SELF-HOST</span></div><div class="opt-desc">Run on your own GPU cluster.</div><div class="opt-meta"><span><b>64K</b> ctx</span><span><b>$0</b>/M tok</span></div></div>
+                </div>
+              </div>
+              <div class="field"><label>Temperature</label><div class="slider-row"><input type="range" class="slider" min="0" max="100" value="20" oninput="this.nextElementSibling.textContent=(this.value/100).toFixed(2);updatePreview()"><div class="slider-val">0.20</div></div><div class="hint">Lower = deterministic & precise. Recommended for triage.</div></div>
+              <div class="field"><label>Max Output Tokens</label><div class="slider-row"><input type="range" class="slider" min="256" max="8192" value="2048" oninput="this.nextElementSibling.textContent=this.value"><div class="slider-val">2048</div></div></div>
+            </div>
+            <!-- step 2 -->
+            <div class="step-pane hidden" data-pane="2">
+              <div class="field"><label>Memory Type <span class="req">*</span></label>
+                <div class="opt-grid">
+                  <div class="opt sel" onclick="pickOne(this)"><div class="opt-name">Vector Memory</div><div class="opt-desc">Semantic recall via embeddings. Persistent across sessions.</div></div>
+                  <div class="opt" onclick="pickOne(this)"><div class="opt-name">Buffer Window</div><div class="opt-desc">Last N turns only. Lightweight & cheap.</div></div>
+                  <div class="opt" onclick="pickOne(this)"><div class="opt-name">Knowledge Graph</div><div class="opt-desc">Entity-relationship memory for reasoning chains.</div></div>
+                  <div class="opt" onclick="pickOne(this)"><div class="opt-name">Stateless</div><div class="opt-desc">No memory. Pure function.</div></div>
+                </div>
+              </div>
+              <div class="row-2">
+                <div class="field"><label>Embedding Model</label><select class="sel"><option>sporos-embed-v2 (1536d)</option><option>sporos-embed-large (3072d)</option></select></div>
+                <div class="field"><label>Retention</label><select class="sel"><option>30 days</option><option>90 days</option><option>Indefinite</option></select></div>
+              </div>
+              <div class="field"><label>Context Window Strategy</label><select class="sel"><option>Recency + relevance hybrid (recommended)</option><option>Pure recency</option><option>Pure relevance (MMR)</option></select></div>
+            </div>
+            <!-- step 3 -->
+            <div class="step-pane hidden" data-pane="3">
+              <div class="field"><label>Connected Tools</label>
+                <div class="tools">
+                  <div class="tool-chip sel" onclick="toggleTool(this)"><span class="chk">✓</span>Web Search</div>
+                  <div class="tool-chip sel" onclick="toggleTool(this)"><span class="chk">✓</span>Code Interpreter</div>
+                  <div class="tool-chip" onclick="toggleTool(this)"><span class="chk">+</span>SQL Query</div>
+                  <div class="tool-chip sel" onclick="toggleTool(this)"><span class="chk">✓</span>Email / SMTP</div>
+                  <div class="tool-chip" onclick="toggleTool(this)"><span class="chk">+</span>Slack</div>
+                  <div class="tool-chip" onclick="toggleTool(this)"><span class="chk">+</span>Jira</div>
+                  <div class="tool-chip sel" onclick="toggleTool(this)"><span class="chk">✓</span>HTTP Request</div>
+                  <div class="tool-chip" onclick="toggleTool(this)"><span class="chk">+</span>File System</div>
+                  <div class="tool-chip" onclick="toggleTool(this)"><span class="chk">+</span>Browser</div>
+                  <div class="tool-chip" onclick="toggleTool(this)"><span class="chk">+</span>Vision OCR</div>
+                </div>
+                <div class="hint">3 tools active · function calling enabled · parallel execution on</div>
+              </div>
+              <div class="field"><label>Tool Execution Mode</label><select class="sel"><option>Autonomous (agent decides)</option><option>Human-in-the-loop approval</option><option>Sequential only</option></select></div>
+              <div class="field"><label>Max Tool Iterations</label><div class="slider-row"><input type="range" class="slider" min="1" max="25" value="8" oninput="this.nextElementSibling.textContent=this.value"><div class="slider-val">8</div></div></div>
+            </div>
+            <!-- step 4 -->
+            <div class="step-pane hidden" data-pane="4">
+              <div class="field"><label>System Prompt <span class="req">*</span></label><textarea class="area" id="ag-prompt" oninput="updatePreview()">You are a senior support triage specialist. For every inbound ticket:
+
+1. Classify intent: [billing, technical, account, feedback, other]
+2. Assign priority P0–P3 based on impact and urgency.
+3. Draft a concise, empathetic first response.
+4. If the ticket mentions billing disputes or security incidents, set escalate=true and do NOT auto-respond.
+
+Always return structured JSON. Never fabricate account details.</textarea></div>
+              <div class="field"><label>Stop Sequences</label><input class="inp" value="&lt;/response&gt;, [[END]]"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- live preview -->
+        <div class="preview">
+          <div class="term">
+            <div class="term-hd"><div class="win-dots"><i></i><i></i><i></i></div><div class="term-title">~/sporos/agent.preview — live</div><span class="live-dot" style="margin-left:auto"></span></div>
+            <div class="term-body" id="term">
+              <div class="term-line"><span class="pmt">sporos ❯</span> <span class="usr">agent inspect --live</span></div>
+              <div class="term-line out">─────────────────────────────</div>
+              <div class="term-line"><span class="key">name</span>      : <span class="str" id="t-name">support-triage-v3</span></div>
+              <div class="term-line"><span class="key">model</span>     : <span class="str" id="t-model">orion-4-opus</span></div>
+              <div class="term-line"><span class="key">temp</span>      : <span class="str" id="t-temp">0.20</span></div>
+              <div class="term-line"><span class="key">memory</span>    : <span class="str">vector · 30d retention</span></div>
+              <div class="term-line"><span class="key">tools</span>     : <span class="str" id="t-tools">[web_search, code_interp, email]</span></div>
+              <div class="term-line out">─────────────────────────────</div>
+              <div class="term-line out" id="t-desc">// Triages inbound support tickets...</div>
+              <div class="term-line out">&nbsp;</div>
+              <div class="term-line"><span class="pmt">sporos ❯</span> <span class="usr">agent simulate "my card was charged twice"</span></div>
+              <div class="term-line out">▸ intent: <span class="str">billing</span> · priority: <span class="key">P1</span></div>
+              <div class="term-line out">▸ escalate: <span class="dot-warn">true</span> (billing dispute)</div>
+              <div class="term-line out">▸ draft: <span class="str">"I'm sorry for the trouble..."</span></div>
+              <div class="term-line"><span class="pmt">sporos ❯</span> <span class="term-cursor"></span></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:9px;margin-top:12px">
+            <button class="btn ghost" style="flex:1" onclick="stepNav(-1)">◂ Back</button>
+            <button class="btn primary" style="flex:1" onclick="stepNav(1)">Next ▸</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SKILL BUILDER ====== -->
+    <section class="view hidden" id="view-skills">
+      <div class="view-hd">
+        <div>
+          <div class="view-title">Skill Marketplace<span class="blink">_</span></div>
+          <div class="view-desc">Reusable, composable capabilities you can attach to any agent. Publish your own or install from the community.</div>
+        </div>
+        <div class="hd-actions">
+          <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Create Skill</button>
+        </div>
+      </div>
+      <div class="filters">
+        <div class="chip active">All Skills</div>
+        <div class="chip">Data &amp; ETL</div>
+        <div class="chip">Communication</div>
+        <div class="chip">Web &amp; Scraping</div>
+        <div class="chip">Documents</div>
+        <div class="chip">Finance</div>
+        <div class="chip">DevOps</div>
+        <div class="chip">Vision</div>
+      </div>
+      <div class="cards-grid" id="skills-grid"></div>
+    </section>
+
+    <!-- ====== DEPLOYMENT CENTER ====== -->
+    <section class="view hidden" id="view-deploy">
+      <div class="view-hd">
+        <div>
+          <div class="view-title">Deployment Center<span class="blink">_</span></div>
+          <div class="view-desc">Manage rollouts across environments. Stream live logs and monitor health in real time.</div>
+        </div>
+        <div class="hd-actions">
+          <button class="btn ghost">Environments</button>
+          <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>New Deployment</button>
+        </div>
+      </div>
+      <div class="filters">
+        <div class="chip active">All Environments</div>
+        <div class="chip">Production</div>
+        <div class="chip">Staging</div>
+        <div class="chip">Development</div>
+      </div>
+      <div class="dep-grid">
+        <div class="panel">
+          <div class="panel-hd"><h3>Deployments</h3><span class="dim">8 total · 5 live</span></div>
+          <table class="table">
+            <thead><tr><th>Service</th><th>Env</th><th>Status</th><th>Region</th><th>Health</th></tr></thead>
+            <tbody>
+              <tr><td><div class="name">support-triage-v3</div><div class="hash">#2841 · a3f9c2e</div></td><td><span class="env-pill prod">prod</span></td><td><span class="badge live">● Live</span></td><td>us-east-1</td><td><span class="dot-ok">●</span> 99.9%</td></tr>
+              <tr><td><div class="name">data-extractor</div><div class="hash">#1192 · 7be01d4</div></td><td><span class="env-pill prod">prod</span></td><td><span class="badge live">● Live</span></td><td>eu-west-2</td><td><span class="dot-ok">●</span> 100%</td></tr>
+              <tr><td><div class="name">research-synth</div><div class="hash">#0420 · cc28a91</div></td><td><span class="env-pill stg">staging</span></td><td><span class="badge build">↻ Building</span></td><td>us-east-1</td><td><span class="dot-warn">●</span> --</td></tr>
+              <tr><td><div class="name">invoice-parser</div><div class="hash">#3301 · f10e7aa</div></td><td><span class="env-pill prod">prod</span></td><td><span class="badge live">● Live</span></td><td>ap-south-1</td><td><span class="dot-ok">●</span> 99.7%</td></tr>
+              <tr><td><div class="name">legacy-bot</div><div class="hash">#0087 · 1a9b3c0</div></td><td><span class="env-pill prod">prod</span></td><td><span class="badge fail">✕ Failed</span></td><td>ap-south-1</td><td><span class="dot-err">●</span> down</td></tr>
+              <tr><td><div class="name">sentiment-stream</div><div class="hash">#2055 · 8d4f2e1</div></td><td><span class="env-pill stg">staging</span></td><td><span class="badge live">● Live</span></td><td>us-west-2</td><td><span class="dot-ok">●</span> 98.2%</td></tr>
+              <tr><td><div class="name">sandbox-runner</div><div class="hash">#0012 · local</div></td><td><span class="env-pill dev">dev</span></td><td><span class="badge idle">○ Idle</span></td><td>local</td><td><span class="dim">--</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="logs">
+          <div class="logs-hd"><span class="live-dot"></span><h3>Live Logs — support-triage-v3</h3></div>
+          <div class="logs-body" id="log-stream"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== TEMPLATES ====== -->
+    <section class="view hidden" id="view-templates">
+      <div class="view-hd">
+        <div>
+          <div class="view-title">Template Gallery<span class="blink">_</span></div>
+          <div class="view-desc">Production-ready agent blueprints. Fork, customize, and deploy in under a minute.</div>
+        </div>
+        <div class="hd-actions">
+          <div class="topbar-search" style="max-width:260px">
+            <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+            <input placeholder="Search templates...">
+          </div>
+        </div>
+      </div>
+      <div class="filters">
+        <div class="chip active">Featured</div>
+        <div class="chip">Customer Support</div>
+        <div class="chip">Sales</div>
+        <div class="chip">Research</div>
+        <div class="chip">Engineering</div>
+        <div class="chip">Operations</div>
+        <div class="chip">Content</div>
+      </div>
+      <div class="cards-grid" id="templates-grid"></div>
+    </section>
+
+    <!-- ====== ANALYTICS ====== -->
+    <section class="view hidden" id="view-analytics">
+      <div class="view-hd">
+        <div>
+          <div class="view-title">Analytics<span class="blink">_</span></div>
+          <div class="view-desc">Usage, performance, and cost intelligence across your agent fleet. Range: last 30 days.</div>
+        </div>
+        <div class="hd-actions">
+          <button class="btn ghost">Last 30 days ▾</button>
+          <button class="btn ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export</button>
+        </div>
+      </div>
+
+      <div class="grid stats" style="margin-bottom:18px">
+        <div class="stat"><div class="stat-top"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="stat-trend up">▲ 23%</div></div><div class="stat-val" data-count="48.2" data-suffix="M">0</div><div class="stat-label">Total Tokens</div></div>
+        <div class="stat"><div class="stat-top"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div><div class="stat-trend down">▼ 11%</div></div><div class="stat-val" data-count="1.4" data-suffix="s">0</div><div class="stat-label">Avg Latency</div></div>
+        <div class="stat"><div class="stat-top"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 6 9 17l-5-5"/></svg></div><div class="stat-trend up">▲ 1.2%</div></div><div class="stat-val" data-count="96.4" data-suffix="%">0</div><div class="stat-label">Success Rate</div></div>
+        <div class="stat"><div class="stat-top"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-trend down">▼ 8%</div></div><div class="stat-val" data-prefix="$" data-count="12.7" data-suffix="K">0</div><div class="stat-label">Total Spend</div></div>
+      </div>
+
+      <div class="grid an-grid" style="margin-bottom:18px">
+        <div class="panel">
+          <div class="panel-hd"><div class="win-dots"><i></i><i></i><i></i></div><h3>Usage Over Time</h3><span class="dim">tokens / day</span></div>
+          <div class="panel-body"><div class="chart-box"><svg class="chart" id="usage-chart" viewBox="0 0 560 220" preserveAspectRatio="none"></svg></div>
+            <div class="legend"><div class="legend-item"><span class="sw" style="background:var(--phos)"></span>Input</div><div class="legend-item"><span class="sw" style="background:var(--cyan)"></span>Output</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hd"><div class="win-dots"><i></i><i></i><i></i></div><h3>Cost Breakdown</h3><span class="dim">by model</span></div>
+          <div class="panel-body"><div class="chart-box"><svg class="chart" id="cost-chart" viewBox="0 0 560 220"></svg></div>
+            <div class="legend"><div class="legend-item"><span class="sw" style="background:var(--phos)"></span>Opus</div><div class="legend-item"><span class="sw" style="background:var(--cyan)"></span>Sonnet</div><div class="legend-item"><span class="sw" style="background:var(--amber)"></span>Haiku</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid cols-2">
+        <div class="panel">
+          <div class="panel-hd"><h3>Agent Performance</h3><span class="dim">ranked by throughput</span></div>
+          <div class="panel-body">
+            <div class="perf-row"><div class="perf-rank">1</div><div class="perf-name">data-extractor<span>1.4M invocations</span></div><div class="perf-track"><div class="perf-fill" style="width:94%"></div></div><div class="perf-val">94%</div></div>
+            <div class="perf-row"><div class="perf-rank">2</div><div class="perf-name">support-triage-v3<span>820K invocations</span></div><div class="perf-track"><div class="perf-fill" style="width:88%"></div></div><div class="perf-val">88%</div></div>
+            <div class="perf-row"><div class="perf-rank">3</div><div class="perf-name">invoice-parser<span>540K invocations</span></div><div class="perf-track"><div class="perf-fill" style="width:79%"></div></div><div class="perf-val">79%</div></div>
+            <div class="perf-row"><div class="perf-rank">4</div><div class="perf-name">sentiment-stream<span>410K invocations</span></div><div class="perf-track"><div class="perf-fill" style="width:71%"></div></div><div class="perf-val">71%</div></div>
+            <div class="perf-row"><div class="perf-rank">5</div><div class="perf-name">research-synth<span>180K invocations</span></div><div class="perf-track"><div class="perf-fill" style="width:52%"></div></div><div class="perf-val">52%</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hd"><div class="win-dots"><i></i><i></i><i></i></div><h3>Cost Tracking</h3><span class="dim">cumulative · $</span></div>
+          <div class="panel-body"><div class="chart-box"><svg class="chart" id="track-chart" viewBox="0 0 560 220" preserveAspectRatio="none"></svg></div></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* ---------- NAV ---------- */
+const views=['dashboard','builder','skills','deploy','templates','analytics'];
+function go(v){
+  views.forEach(x=>document.getElementById('view-'+x).classList.toggle('hidden',x!==v));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===v&&!n.textContent.includes('Settings')));
+  document.getElementById('crumb').textContent=v;
+  document.getElementById('side').classList.remove('open');
+  window.scrollTo(0,0);
+  document.querySelectorAll('#view-'+v+' [data-count]').forEach(animateCount);
+  if(v==='analytics'){drawUsage();drawCost();drawTrack();}
+  if(v==='dashboard')drawThroughput();
+}
+document.querySelectorAll('.nav-item[data-view]').forEach(n=>{
+  if(n.textContent.includes('Settings'))return;
+  n.addEventListener('click',()=>go(n.dataset.view));
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  const i=parseInt(e.key); if(i>=1&&i<=6)go(views[i-1]);
+});
+
+/* ---------- COUNTER ANIM ---------- */
+function animateCount(el){
+  const target=parseFloat(el.dataset.count), pre=el.dataset.prefix||'', suf=el.dataset.suffix||'';
+  const dec=(target%1!==0)?(target<10?2:1):0; let cur=0; const steps=40;
+  const inc=target/steps; let i=0;
+  clearInterval(el._iv);
+  el._iv=setInterval(()=>{
+    cur+=inc; i++;
+    if(i>=steps){cur=target;clearInterval(el._iv);}
+    el.textContent=pre+cur.toFixed(dec)+suf;
+  },18);
+}
+
+/* ---------- AGENT BUILDER ---------- */
+let curStep=0;
+function showStep(s){
+  curStep=Math.max(0,Math.min(4,s));
+  document.querySelectorAll('.step-pane').forEach(p=>p.classList.toggle('hidden',+p.dataset.pane!==curStep));
+  document.querySelectorAll('.step').forEach(st=>{
+    const n=+st.dataset.step;
+    st.classList.toggle('active',n===curStep);
+    st.classList.toggle('done',n<=curStep);
+  });
+  const titles=['Step 1 — Identity','Step 2 — Model','Step 3 — Memory','Step 4 — Tools','Step 5 — Prompt'];
+  document.getElementById('step-title').textContent=titles[curStep];
+}
+function stepNav(d){showStep(curStep+d);}
+document.querySelectorAll('.step').forEach(s=>s.addEventListener('click',()=>showStep(+s.dataset.step)));
+function pickModel(el,m){el.parentElement.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');document.getElementById('t-model').textContent=m;}
+function pickOne(el){el.parentElement.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');}
+function toggleTool(el){
+  el.classList.toggle('sel');
+  el.querySelector('.chk').textContent=el.classList.contains('sel')?'✓':'+';
+  const names=[...document.querySelectorAll('.tool-chip.sel')].map(t=>t.textContent.replace('✓','').trim().toLowerCase().replace(/[\s/]+/g,'_')).slice(0,3);
+  document.getElementById('t-tools').textContent='['+names.join(', ')+']';
+}
+function updatePreview(){
+  const n=document.getElementById('ag-name').value||'untitled';
+  document.getElementById('t-name').textContent=n;
+  const t=document.querySelector('[data-pane="1"] .slider-val');
+  if(t)document.getElementById('t-temp').textContent=t.textContent;
+}
+
+/* ---------- SKILLS DATA ---------- */
+const skills=[
+  {n:'pdf-redactor',c:'Documents',d:'Detects and redacts PII, signatures, and sensitive figures from PDFs before they enter your pipeline.',col:'var(--phos)',i:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6',inst:'12.4k',star:'4.9',feat:true},
+  {n:'sql-genius',c:'Data & ETL',d:'Natural language to optimized SQL with schema awareness and automatic query validation.',col:'var(--cyan)',i:'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6',inst:'9.1k',star:'4.8'},
+  {n:'web-harvester',c:'Web & Scraping',d:'Resilient structured extraction from any webpage with auto-retry, proxy rotation, and JS rendering.',col:'var(--amber)',i:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M2 12h20 M12 2c3 3 3 17 0 20 M12 2c-3 3-3 17 0 20',inst:'18.7k',star:'4.9',feat:true},
+  {n:'inbox-zero',c:'Communication',d:'Classifies, prioritizes, and drafts replies for incoming email. Integrates with Gmail & Outlook.',col:'var(--magenta)',i:'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M2 7l10 6 10-6',inst:'7.3k',star:'4.7'},
+  {n:'invoice-ocr',c:'Documents',d:'Line-item extraction from invoices & receipts. Outputs validated structured JSON.',col:'var(--phos)',i:'M9 2h6a2 2 0 0 1 2 2v16l-3-2-2 2-2-2-3 2V4a2 2 0 0 1 2-2z M9 7h6 M9 11h6',inst:'11.2k',star:'4.8'},
+  {n:'ledger-sync',c:'Finance',d:'Reconciles transactions across Stripe, QuickBooks, and your ledger with anomaly flags.',col:'var(--cyan)',i:'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',inst:'5.6k',star:'4.6'},
+  {n:'deploy-guard',c:'DevOps',d:'Pre-deploy checks: schema diffs, secret scanning, and automated canary rollout decisions.',col:'var(--amber)',i:'M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5z M9 12l2 2 4-4',inst:'4.2k',star:'4.9'},
+  {n:'vision-tagger',c:'Vision',d:'Auto-tags, captions, and moderates image uploads at scale with bounding-box detection.',col:'var(--magenta)',i:'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',inst:'6.8k',star:'4.7'},
+  {n:'slack-router',c:'Communication',d:'Routes Slack messages to the right agent or human based on intent and on-call schedules.',col:'var(--phos)',i:'M14 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V4a2 2 0 0 0-2-2z M20 10a2 2 0 0 0 0 4h-6 M10 22a2 2 0 0 0 2-2v-6a2 2 0 0 0-4 0v6a2 2 0 0 0 2 2z',inst:'3.9k',star:'4.6'}
+];
+const templates=[
+  {n:'Support Copilot',c:'Customer Support',d:'Full triage + reply pipeline with escalation rules, KB retrieval, and CSAT tracking baked in.',col:'var(--phos)',i:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',forks:'2.1k',star:'5.0',feat:true},
+  {n:'SDR Outreach Engine',c:'Sales',d:'Researches prospects, personalizes cold outreach, and books meetings via calendar integration.',col:'var(--cyan)',i:'M22 2 11 13 M22 2 15 22l-4-9-9-4z',forks:'1.7k',star:'4.9',feat:true},
+  {n:'Deep Research Analyst',c:'Research',d:'Multi-source research with citations, synthesis, and exportable report generation.',col:'var(--amber)',i:'M9 2v6l-4 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-4-8V2 M9 2h6 M7 14h10',forks:'3.4k',star:'4.9',feat:true},
+  {n:'PR Review Bot',c:'Engineering',d:'Reviews pull requests for bugs, style, and security; comments inline on GitHub & GitLab.',col:'var(--magenta)',i:'M6 3v12 M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M18 9v6a6 6 0 0 1-6 6',forks:'1.2k',star:'4.8'},
+  {n:'Ops Incident Commander',c:'Operations',d:'Detects incidents, opens a war room, pages on-call, and drafts the post-mortem timeline.',col:'var(--phos)',i:'M12 9v4 M12 17h.01 M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',forks:'890',star:'4.7'},
+  {n:'Content Studio',c:'Content',d:'Briefs to publish-ready drafts with SEO scoring, image prompts, and brand-voice tuning.',col:'var(--cyan)',i:'M12 19l7-7 3 3-7 7-3-3z M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z M2 2l7.586 7.586 M11 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',forks:'2.6k',star:'4.8'}
+];
+function renderCards(grid,data,type){
+  document.getElementById(grid).innerHTML=data.map(s=>`
+    <div class="mkt-card ${s.feat?'feat':''}">
+      ${s.feat?'<div class="feat-flag">FEATURED</div>':''}
+      <div class="mkt-top">
+        <div class="mkt-ico" style="color:${s.col}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${s.i.split(' M').map((p,idx)=>`<path d="${idx?'M'+p:p}"/>`).join('')}</svg></div>
+        <div class="mkt-info"><div class="mkt-name">${s.n} <span class="v">v1.4</span></div><div class="mkt-cat">${s.c}</div></div>
+      </div>
+      <div class="mkt-desc">${s.d}</div>
+      <div class="mkt-foot">
+        <div class="m"><span class="stars">★</span> <b>${s.star}</b></div>
+        <div class="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> ${type==='tpl'?s.forks+' forks':s.inst+' installs'}</div>
+        <button class="btn" style="margin-left:auto;padding:5px 12px;font-size:11px">${type==='tpl'?'Use':'Install'}</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------- LOG STREAM ---------- */
+const logSeed=[
+  ['12:04:51','OK','build #2841 completed in <span class="h">41.2s</span>'],
+  ['12:04:50','INF','pushing image sporos/triage:a3f9c2e → registry'],
+  ['12:04:48','INF','running 142 unit tests... <span class="h">142 passed</span>'],
+  ['12:04:42','OK','vector index hydrated · <span class="h">38,204 docs</span>'],
+  ['12:04:39','INF','warming model orion-4-opus on 2x A100'],
+  ['12:04:35','WRN','retry 1/3 — embedding service cold start'],
+  ['12:04:31','INF','provisioning compute · region us-east-1'],
+  ['12:04:28','OK','health probe /readyz → 200'],
+  ['12:04:25','INF','rolling out canary 10% traffic'],
+  ['12:04:20','INF','canary metrics nominal · p99 312ms'],
+  ['12:04:12','OK','promoting canary → 100% traffic'],
+  ['12:04:08','INF','draining previous revision #2840'],
+];
+function renderLogs(){
+  document.getElementById('log-stream').innerHTML=logSeed.map(l=>`<div class="log-ln"><span class="log-ts">${l[0]}</span><span class="log-lv ${l[1]}">${l[1]}</span><span class="log-msg">${l[2]}</span></div>`).join('');
+}
+let logTick=0;
+const newLogs=[['OK','request handled · <span class="h">142ms</span>'],['INF','token usage <span class="h">+1,204</span>'],['INF','memory write · vector upsert ok'],['OK','escalation routed to human queue'],['WRN','rate limit soft-throttle applied']];
+setInterval(()=>{
+  const ls=document.getElementById('log-stream'); if(!ls||document.getElementById('view-deploy').classList.contains('hidden'))return;
+  const now=new Date(); const t=now.toTimeString().slice(0,8);
+  const n=newLogs[logTick++%newLogs.length];
+  const div=document.createElement('div'); div.className='log-ln';
+  div.innerHTML=`<span class="log-ts">${t}</span><span class="log-lv ${n[0]}">${n[0]}</span><span class="log-msg">${n[1]}</span>`;
+  ls.insertBefore(div,ls.firstChild);
+  if(ls.children.length>40)ls.removeChild(ls.lastChild);
+},2200);
+
+/* ---------- CHARTS ---------- */
+function lineChart(id,series,smooth=true){
+  const svg=document.getElementById(id); if(!svg)return;
+  const W=560,H=200,pad=10; svg.innerHTML='';
+  // grid
+  for(let i=0;i<=4;i++){const y=pad+(H-pad*2)*i/4;svg.innerHTML+=`<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`;}
+  series.forEach(s=>{
+    const max=Math.max(...s.data)*1.15;
+    const pts=s.data.map((v,i)=>[i/(s.data.length-1)*W,H-pad-(v/max)*(H-pad*2)]);
+    let d=`M ${pts[0][0]} ${pts[0][1]}`;
+    for(let i=1;i<pts.length;i++){
+      if(smooth){const[x0,y0]=pts[i-1],[x1,y1]=pts[i],cx=(x0+x1)/2;d+=` C ${cx} ${y0} ${cx} ${y1} ${x1} ${y1}`;}
+      else d+=` L ${pts[i][0]} ${pts[i][1]}`;
+    }
+    const area=d+` L ${W} ${H} L 0 ${H} Z`;
+    svg.innerHTML+=`<path d="${area}" fill="${s.col}" opacity="0.08"/>`;
+    svg.innerHTML+=`<path d="${d}" fill="none" stroke="${s.col}" stroke-width="2.2" style="filter:drop-shadow(0 0 5px ${s.col})"/>`;
+    pts.forEach(p=>{svg.innerHTML+=`<circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="${s.col}"/>`;});
+  });
+}
+const r=(n,v)=>Array.from({length:n},()=>Math.random()*v);
+function drawThroughput(){lineChart('throughput',[{data:[120,180,150,220,190,260,240,300,280,340,310,380],col:'var(--phos)'},{data:[80,110,95,140,130,160,150,190,180,210,200,240],col:'var(--cyan)'}]);}
+function drawUsage(){lineChart('usage-chart',[{data:[1.2,1.8,1.5,2.2,2.0,2.8,2.4,3.1,2.9,3.6,3.3,4.1,3.8,4.4].map(x=>x*10),col:'var(--phos)'},{data:[0.8,1.1,0.9,1.4,1.3,1.7,1.5,1.9,1.8,2.2,2.0,2.5,2.3,2.7].map(x=>x*10),col:'var(--cyan)'}]);}
+function drawTrack(){lineChart('track-chart',[{data:[1,2.1,3.4,4.2,5.8,6.9,8.1,9.4,10.2,11.5,12.0,12.7].map(x=>x),col:'var(--amber)'}]);}
+function drawCost(){
+  const svg=document.getElementById('cost-chart'); if(!svg)return;
+  const data=[{l:'W1',o:18,s:9,h:3},{l:'W2',o:24,s:12,h:4},{l:'W3',o:21,s:15,h:5},{l:'W4',o:30,s:18,h:6}];
+  const W=560,H=200,bw=80,gap=(W-bw*4)/5; svg.innerHTML='';
+  data.forEach((d,i)=>{
+    const x=gap+(bw+gap)*i; const tot=d.o+d.s+d.h, max=70; let y=H;
+    [['var(--amber)',d.h],['var(--cyan)',d.s],['var(--phos)',d.o]].forEach(([c,v])=>{
+      const hh=(v/max)*(H-10); y-=hh;
+      svg.innerHTML+=`<rect x="${x}" y="${y}" width="${bw}" height="${hh}" fill="${c}" opacity="0.85" rx="2"/>`;
+    });
+    svg.innerHTML+=`<text x="${x+bw/2}" y="${H-6}" text-anchor="middle" fill="var(--txt-faint)" font-size="11">${d.l}</text>`;
+  });
+}
+
+/* ---------- INIT ---------- */
+renderCards('skills-grid',skills,'skill');
+renderCards('templates-grid',templates,'tpl');
+renderLogs();
+document.querySelectorAll('#view-dashboard [data-count]').forEach(animateCount);
+drawThroughput();
+// filter chips
+document.querySelectorAll('.filters').forEach(f=>f.addEventListener('click',e=>{if(e.target.classList.contains('chip')){f.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));e.target.classList.add('active');}}));
+window.go=go;window.stepNav=stepNav;window.pickModel=pickModel;window.pickOne=pickOne;window.toggleTool=toggleTool;window.updatePreview=updatePreview;
+</script>
+</body>
+</html>
